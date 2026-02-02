@@ -8,14 +8,13 @@ from sklearn.mixture import GaussianMixture
 # -----------------------------
 # 1) Φόρτωση & φιλτράρισμα
 # -----------------------------
-# Προσαρμόζεις το path στο δικό σου αρχείο
 csv_path = "crimes.csv"
 df = pd.read_csv(csv_path)
 
 # Κρατάμε μόνο TRAIN+VAL
 df = df[df["split"].isin(["TRAIN", "VAL"])].copy()
 
-# Βεβαιώσου ότι υπάρχουν οι απαιτούμενες στήλες
+# Επιβεβαίωση ότι έχουμε όλες τις απαιτούμενες στήλες
 required_cols = ["hour_float", "victim_age", "latitude", "longitude"]
 missing = [c for c in required_cols if c not in df.columns]
 assert not missing, f"Λείπουν στήλες: {missing}"
@@ -95,10 +94,10 @@ sns.histplot(h.flatten(), bins=np.linspace(0,24,49), stat="density", edgecolor="
              color="#4C78A8", alpha=0.6, ax=ax)
 ax.plot(grid, pdf_single, color="crimson", lw=2, label=f"Μονο-Γκαουσιανή N(μ={mu:.2f}, σ={sigma:.2f})")
 ax.plot(grid, pdf_gmm, color="#2CA02C", lw=2, label="GMM (3 συστατικά)")
-
+times = ["Πρωινές ώρες", "Απογευματινές ώρες", "Βραδινές ώρες"]
 # (Προαιρετικά) δείξε και τις επιμέρους καμπύλες
-for j, comp_pdf in enumerate(component_pdfs, 1):
-    ax.plot(grid, comp_pdf, lw=1.5, linestyle="--", label=f"Συστατικό {j}")
+for j, comp_pdf in enumerate(component_pdfs):
+    ax.plot(grid, comp_pdf, lw=1.5, linestyle="--", label=times[j])
 
 ax.set_xlim(0, 24)
 ax.set_xlabel("hour_float")
@@ -121,13 +120,5 @@ ax.set_title("2D scatter: hour_float vs longitude (TRAIN+VAL, χωρίς labels)
 plt.tight_layout()
 fig.savefig("q1_scatter_hour_vs_longitude.png", dpi=150)
 
+# Επιβεβαίωση ότι τρέχει
 print("ΟΚ: Δημιουργήθηκαν τα σχήματα Q1.")
-
-
-#echo "#pattern_recog" >> README.md
-#git init
-#git add README.md
-#git commit -m "first commit"
-#git branch -M main
-#git remote add origin https://github.com/TeriGrig/test.git
-#git push -u origin main
