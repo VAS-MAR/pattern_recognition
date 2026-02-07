@@ -7,6 +7,9 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from matplotlib.patches import Patch
+import matplotlib.colors as mcolors
+
 # Load data
 df = pd.read_csv("crimes.csv")
 
@@ -29,6 +32,30 @@ yval   = val["killer_id"].values
 killers = sorted(np.unique(ytrain))
 S = len(killers)
 
+
+def safe_inverse_and_logdet(Sigma, base_lambda=1e-6, tries=6):
+    """
+    Προσθέτει λI στη διαγώνιο μέχρι να μπορεί να αντιστραφεί ο πίνακας.
+    Επιστρέφει: inv(Sigma_reg), logdet(Sigma_reg), λ που χρησιμοποιήθηκε.
+    """
+    lam = base_lambda
+    for _ in range(tries):
+        Sigma_reg = Sigma + lam * np.eye(Sigma.shape[0])
+        # πιο σταθερό από το log(det(.))
+        sign, logdet = np.linalg.slogdet(Sigma_reg)
+        if sign > 0:
+            try:
+                invS = np.linalg.inv(Sigma_reg)
+                return invS, logdet, lam
+            except np.linalg.LinAlgError:
+                pass
+        lam *= 10  # αν δεν τα καταφέραμε, αυξάνουμε λίγο το «μαξιλαράκι»
+    # έσχατη λύση: ψευδο-αντιστροφή (δουλεύει, αλλά προτιμάμε την από πάνω λύση)
+    invS = np.linalg.pinv(Sigma)
+    sign, logdet = np.linalg.slogdet(Sigma + lam * np.eye(Sigma.shape[0]))
+    return invS, logdet, lam
+
+
 # Compute priors π_k
 pi = {}
 Nk_total = len(train)
@@ -46,15 +73,20 @@ for k in killers:
     diff = Xk - mu_k
     Sigma_k = (diff.T @ diff) / Xk.shape[0]
     mu_dict[k] = mu_k
-    cov_dict[k] = Sigma_k 
+    cov_dict[k] = Sigma_k
 
 # Precompute inverses & log-determinants
 invcov = {}
 logdet = {}
+lambda_used = {}
+
 for k in killers:
-    Sigma = cov_dict[k]
-    invcov[k] = inv(Sigma)
-    logdet[k] = np.log(det(Sigma))
+    Sigma = cov_dict[k]  # ο πίνακας συνδιακύμανσης από το Q2
+    invS, ldet, lam = safe_inverse_and_logdet(Sigma, base_lambda=1e-6)
+    invcov[k] = invS
+    logdet[k] = ldet
+    lambda_used[k] = lam
+
 
 def log_gaussian(x, mu, Sigma_inv, logdet):
     diff = x - mu
@@ -67,7 +99,7 @@ def predict_proba(x):
         lg = np.log(pi[k]) + log_gaussian(
             x,
             mu_dict[k],
-            inv_cov[k],
+            invcov[k],
             logdet[k]
         )
         log_scores.append(lg)
@@ -117,6 +149,7 @@ Xorig = scaler.inverse_transform(Xorig)
 
 preds = np.array([predict_class(x) for x in Xorig])
 
+"""
 plt.figure(figsize=(7,6))
 plt.contourf(xx, yy, preds.reshape(xx.shape), alpha=0.3, cmap="tab20")
 plt.scatter(Z[:,0], Z[:,1], c=ytrain, s=12, cmap="tab20")
@@ -124,4 +157,44 @@ plt.title("Gaussian Bayes decision regions (2D PCA projection)")
 plt.xlabel("PC1")
 plt.ylabel("PC2")
 plt.tight_layout()
-plt.show()
+plt.savefig(f"q3_PCA.png", dpi=150)
+plt.close()
+"""
+
+
+label_to_idx = {k:i for i,k in enumerate(killers)}  # π.χ. 1->0, 2->1, ...
+
+# Μετατρέπω σε "δείκτες" για να έχω ίδιο mapping χρώματος
+preds_idx = np.vectorize(label_to_idx.get)(preds)          # για το φόντο
+ytrain_idx = np.vectorize(label_to_idx.get)(ytrain)         # για τα σημεία
+
+# Έχω διακριτή παλέτα με len(killers) χρώματα και αντίστοιχο normalization
+cmap = plt.get_cmap('tab20', len(killers))
+norm = mcolors.BoundaryNorm(boundaries=np.arange(-0.5, len(killers)+0.5, 1),
+                             ncolors=len(killers))
+
+fig, ax = plt.subplots(figsize=(7,6))
+
+# Φόντο: preds_idx
+Zgrid = preds_idx.reshape(xx.shape)
+ax.contourf(xx, yy, Zgrid,
+            levels=np.arange(-0.5, len(killers)+0.5, 1),
+            cmap=cmap, norm=norm, alpha=0.3)
+
+# Σημεία: ytrain_idx
+ax.scatter(Z[:,0], Z[:,1], c=ytrain_idx, cmap=cmap, norm=norm,
+           s=12, edgecolor='k', linewidths=0.2)
+
+ax.set_title("Gaussian Bayes decision regions (2D PCA projection)")
+ax.set_xlabel("PC1"); ax.set_ylabel("PC2")
+
+# === Legend box με ίδια χρώματα για όλους ===
+handles = [Patch(facecolor=cmap(norm(i)), edgecolor='k', label=f"Killer {k}")
+           for i, k in enumerate(killers)]
+leg = ax.legend(handles=handles, title="Χαρτογράφηση χρωμάτων", loc='lower right',
+                frameon=True, fontsize=9, title_fontsize=10)
+leg.get_frame().set_alpha(0.9)
+
+plt.tight_layout()
+plt.savefig("q3_PCA_with_consistent_legend.png", dpi=150)
+plt.close()
