@@ -2,11 +2,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.stats import norm
-from sklearn.mixture import GaussianMixture
-from numpy import array
-from numpy import mean
-from numpy import cov
 from numpy.linalg import inv
 
 csv_path = "crimes.csv"
