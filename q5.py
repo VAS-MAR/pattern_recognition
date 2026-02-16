@@ -77,7 +77,7 @@ def fit_and_eval(model: Pipeline, X_tr: pd.DataFrame, y_tr: np.ndarray,X_val: pd
     acc = accuracy_score(y_val, pred_val)
     cm = confusion_matrix(y_val, pred_val)
 
-    print(f"VAL accuracy ({kernel_tag}): {acc:.4f}")
+    print(f"VAL accuracy ({kernel_tag}): {acc}")
     print("Confusion matrix (rows=true, cols=pred):")
     print(cm)
 
