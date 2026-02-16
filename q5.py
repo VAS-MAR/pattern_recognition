@@ -11,7 +11,7 @@ from sklearn.svm import SVC
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.decomposition import PCA
-
+import joblib
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # --------------------------- USER CONFIG ---------------------------
@@ -222,3 +222,6 @@ split_mask = tv_df["split"].values == "TRAIN"
 plot_pca_and_support_vectors(tv_df, y_tv, split_mask, pre, clf_ovr, KERNEL, FIGDIR)
 
 print("Saved figures to:", os.path.abspath(FIGDIR))
+
+
+model_svm = best_model
