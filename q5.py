@@ -1,7 +1,6 @@
 import os
 import warnings
 from typing import Tuple
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -18,7 +17,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # --------------------------- USER CONFIG ---------------------------
 CSV_PATH = "crimes.csv"          # Path to your dataset
 KERNEL = "rbf"                   # "rbf" or "poly"
-FIGDIR = "figures"               # Where to save figures
+FIGDIR = "Q5 diagrams"               # Where to save figures
 
 # Initial/default hyperparameters (a candidate that will be tried)
 C_0 = 1.0
