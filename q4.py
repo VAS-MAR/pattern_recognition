@@ -53,8 +53,6 @@ label_to_idx = {k:i for i,k in enumerate(killers)}
 ytrain_idx = np.array([label_to_idx[k] for k in ytrain])
 yval_idx   = np.array([label_to_idx[k] for k in yval])
 
-
-
 # ================================
 # 2) Q4: Linear Classifier (γραμμικό)
 # ================================
