@@ -155,7 +155,7 @@ print(f"Expected shape: ({len(test)}, 2)")
 print(f"Match: {len(submission) == len(test)} ✓" if len(submission) == len(
     test) else f"Match: {len(submission) == len(test)} ✗")
 
-submission.to_csv("submission.csv", index=False)
+submission.to_csv("submission2.csv", index=False)
 print(f"\n✓ submission.csv created successfully!")
 
 # Double-check file

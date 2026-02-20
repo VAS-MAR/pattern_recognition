@@ -65,7 +65,7 @@ Z_test_m  = pca_m.transform(Z_test)
 # 5. Q8: K-means Clustering (Unsupervised Learning)
 # ---------------------------------------------------------
 # Εκπαίδευση του k-means με k = S clusters στον PCA χώρο
-kmeans = KMeans(n_clusters=S, random_state=42, n_init=10)
+kmeans = KMeans(n_clusters=S, random_state=42, n_init=50)
 train_clusters = kmeans.fit_predict(Z_train_m)
 
 # ---------------------------------------------------------
@@ -96,24 +96,37 @@ print(f"Q8: VAL Accuracy = {val_acc:.4f}")
 test_clusters = kmeans.predict(Z_test_m)
 test_pred = np.array([cluster_to_killer[c] for c in test_clusters])
 
-# Προετοιμασία των στηλών p_killer_1...p_killer_S (πιθανότητες)
-# Για το k-means βάζουμε 1.0 στην επιλεγμένη κλάση
-p_probs = np.zeros((len(test_pred), S))
-for i, k_id in enumerate(test_pred):
-    p_probs[i, k_id - 1] = 1.0
+distances = kmeans.transform(Z_test_m)
 
-# Δημιουργία του DataFrame
-submission = pd.DataFrame({
-    "incident_id": test["incident_id"],
-    "predicted_killer": test_pred
-})
+# 2. Μετατροπή αποστάσεων σε πιθανότητες (Softmax approach)
+# Χρησιμοποιούμε exp(-dist) ώστε οι μικρές αποστάσεις να δίνουν μεγάλες πιθανότητες
+inv_distances = np.exp(-distances)
+# Κανονικοποίηση ώστε το άθροισμα κάθε γραμμής να είναι 1 [cite: 91]
+probs_clusters = inv_distances / np.sum(inv_distances, axis=1, keepdims=True)
 
+# 3. Δημιουργία DataFrame
+submission = pd.DataFrame({"incident_id": test["incident_id"], "predicted_killer": test_pred})
+
+# 4. Υπολογισμός πιθανοτήτων για κάθε killer_id (1 έως S)
 for k in range(1, S + 1):
-    submission[f"p_killer_{k}"] = p_probs[:, k-1]
+    # Βρίσκουμε ποια clusters (q) αντιστοιχούν στον δολοφόνο k [cite: 218]
+    matching_clusters = [q for q, killer in cluster_to_killer.items() if killer == k]
 
-# Αποθήκευση
+    if matching_clusters:
+        # Αθροίζουμε τις πιθανότητες των clusters που ανήκουν στον δολοφόνο k
+        submission[f"p_killer_{k}"] = probs_clusters[:, matching_clusters].sum(axis=1)
+    else:
+        # Αν ο δολοφόνος k δεν κέρδισε κανένα cluster, του δίνουμε μια πολύ μικρή
+        # βασική πιθανότητα (π.χ. από το πλησιέστερο cluster) για να μην είναι 0
+        submission[f"p_killer_{k}"] = 1e-5
+
+    # Επανεξισορρόπηση (Normalization) για να αθροίζουν ακριβώς στο 1 [cite: 91]
+prob_cols = [f"p_killer_{k}" for k in range(1, S + 1)]
+submission[prob_cols] = submission[prob_cols].div(submission[prob_cols].sum(axis=1), axis=0)
+
 submission.to_csv("submission.csv", index=False)
-print("Q8: submission.csv created successfully.")
+
+print("Q8: submission.csv created with decimal probabilities!")
 
 # ---------------------------------------------------------
 # 9. Οπτικοποίηση (Scatter Plot)
