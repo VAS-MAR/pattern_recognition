@@ -53,7 +53,6 @@ yval_idx   = np.array([label_to_idx[k] for k in yval])
 
 # 2) Q4: Linear Classifier (γραμμικό)
 # Επιλογή 1 (σύμφωνη με εκφώνηση): PyTorch MSE + one-hot
-# Αν δεν έχεις PyTorch διαθέσιμο, δες ακριβώς πιο κάτω "Επιλογή 2".
 
 Xtr_t = torch.tensor(Xfull_train, dtype=torch.float32).to(device)  # (N, d_full)
 Xva_t = torch.tensor(Xfull_val,   dtype=torch.float32).to(device)
