@@ -34,10 +34,6 @@ S = len(killers)
 
 
 def safe_inverse_and_logdet(Sigma, base_lambda=1e-6, tries=6):
-    """
-    Προσθέτει λI στη διαγώνιο μέχρι να μπορεί να αντιστραφεί ο πίνακας.
-    Επιστρέφει: inv(Sigma_reg), logdet(Sigma_reg), λ που χρησιμοποιήθηκε.
-    """
     lam = base_lambda
     for _ in range(tries):
         Sigma_reg = Sigma + lam * np.eye(Sigma.shape[0])

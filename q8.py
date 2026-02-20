@@ -7,18 +7,14 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score
 
-# ---------------------------------------------------------
 # 1. Ορισμός Στηλών (Columns)
-# ---------------------------------------------------------
 CONT = [
     "hour_float", "latitude", "longitude", "victim_age",
     "temp_c", "humidity", "dist_precinct_km", "pop_density"
 ]
 CAT = ["weapon_code", "scene_type", "weather", "vic_gender"]
 
-# ---------------------------------------------------------
 # 2. Φόρτωση και Διαχωρισμός Δεδομένων (Splitting)
-# ---------------------------------------------------------
 df = pd.read_csv("crimes.csv")
 
 # Διαχωρισμός με βάση τη στήλη split
@@ -36,9 +32,7 @@ y_val   = val["killer_id"].values
 # S: Ο αριθμός των δολοφόνων
 S = len(np.unique(y_train))
 
-# ---------------------------------------------------------
 # 3. Προεπεξεργασία (Preprocessing)
-# ---------------------------------------------------------
 # Δημιουργία του transformer: scale τις συνεχείς, one-hot τις κατηγορικές
 pre = ColumnTransformer([
     ("scaler", StandardScaler(), CONT),
@@ -50,9 +44,7 @@ Z_train = pre.fit_transform(X_train)
 Z_val   = pre.transform(X_val)
 Z_test  = pre.transform(X_test)
 
-# ---------------------------------------------------------
 # 4. PCA (από το Q7) - Μείωση Διαστάσεων
-# ---------------------------------------------------------
 # Επιλέγουμε m=2 για την οπτικοποίηση και την ομαδοποίηση
 m = 2
 pca_m = PCA(n_components=m)
@@ -61,16 +53,12 @@ Z_train_m = pca_m.fit_transform(Z_train)
 Z_val_m   = pca_m.transform(Z_val)
 Z_test_m  = pca_m.transform(Z_test)
 
-# ---------------------------------------------------------
 # 5. Q8: K-means Clustering (Unsupervised Learning)
-# ---------------------------------------------------------
 # Εκπαίδευση του k-means με k = S clusters στον PCA χώρο
 kmeans = KMeans(n_clusters=S, random_state=42, n_init=50)
 train_clusters = kmeans.fit_predict(Z_train_m)
 
-# ---------------------------------------------------------
 # 6. Αντιστοίχιση Clusters σε Killer IDs (Majority Vote)
-# ---------------------------------------------------------
 cluster_to_killer = {}
 for q in range(S):
     # Βρίσκουμε ποια εγκλήματα του TRAIN μπήκαν στο cluster q
@@ -82,17 +70,13 @@ for q in range(S):
     else:
         cluster_to_killer[q] = -1
 
-# ---------------------------------------------------------
 # 7. Αξιολόγηση στο VAL Split
-# ---------------------------------------------------------
 val_clusters = kmeans.predict(Z_val_m)
 val_pred = np.array([cluster_to_killer[c] for c in val_clusters])
 val_acc = accuracy_score(y_val, val_pred)
 print(f"Q8: VAL Accuracy = {val_acc:.4f}")
 
-# ---------------------------------------------------------
 # 8. Προβλέψεις TEST και Δημιουργία submission.csv
-# ---------------------------------------------------------
 test_clusters = kmeans.predict(Z_test_m)
 test_pred = np.array([cluster_to_killer[c] for c in test_clusters])
 
@@ -128,10 +112,7 @@ submission.to_csv("submission.csv", index=False)
 
 print("Q8: submission.csv created with decimal probabilities!")
 
-# ---------------------------------------------------------
 # 9. Οπτικοποίηση (Scatter Plot)
-# ---------------------------------------------------------
-
 plt.figure(figsize=(8, 6))
 scatter = plt.scatter(Z_test_m[:, 0], Z_test_m[:, 1],
                       c=test_pred, cmap="tab10", s=20, alpha=0.7)

@@ -8,20 +8,14 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score
 
-# ========================
 # Column definitions
-# ========================
-
 CONT = [
     "hour_float", "latitude", "longitude", "victim_age",
     "temp_c", "humidity", "dist_precinct_km", "pop_density"
 ]
 CAT = ["weapon_code", "scene_type", "weather", "vic_gender"]
 
-# ========================
 # Load data
-# ========================
-
 df = pd.read_csv("crimes.csv")
 
 train = df[df["split"] == "TRAIN"]
@@ -33,19 +27,13 @@ y_train = train["killer_id"].values
 X_val = val[CONT + CAT]
 y_val = val["killer_id"].values
 
-# ========================
 # Preprocess (scale + onehot)
-# ========================
-
 pre = ColumnTransformer([
     ("scaler", StandardScaler(), CONT),
     ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False), CAT)
 ])
 
-# ========================
 # Build MLP
-# ========================
-
 mlp = MLPClassifier(
     hidden_layer_sizes=(64, 32),   # 2 hidden layers
     activation="relu",
@@ -60,24 +48,16 @@ model = Pipeline([
     ("mlp", mlp)
 ])
 
-# ========================
 # Train
-# ========================
-
 print("Training MLP...")
 model.fit(X_train, y_train)
-
-# ========================
 # Evaluate on VAL
-# ========================
 
 pred_val = model.predict(X_val)
 acc = accuracy_score(y_val, pred_val)
 print(f"VAL Accuracy: {acc}")
 
-# ========================
 # Permutation Feature Importance
-# ========================
 
 # Baseline accuracy
 A_base = acc
@@ -108,10 +88,7 @@ print("\nTop 5 Most Important Features:")
 for name, imp in top5:
     print(f"{name:35s} ΔA = {imp}")
 
-# ========================
 # Plot top 5
-# ========================
-
 names = [x[0] for x in top5]
 values = [x[1] for x in top5]
 

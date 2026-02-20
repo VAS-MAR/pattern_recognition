@@ -14,7 +14,7 @@ from sklearn.decomposition import PCA
 import joblib
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# --------------------------- USER CONFIG ---------------------------
+# USER CONFIG
 CSV_PATH = "crimes.csv"          # Path to your dataset
 KERNEL = "rbf"                   # "rbf" or "poly"
 FIGDIR = "Q5 diagrams"               # Where to save figures
@@ -155,7 +155,7 @@ def plot_pca_and_support_vectors (full_df: pd.DataFrame, y: np.ndarray,
                     dpi=160, bbox_inches="tight")
         plt.close(fig)
 
-# --------------------------- TOP-LEVEL EXECUTION (no main) ---------------------------
+# TOP-LEVEL EXECUTION
 
 # 1) Load splits (TRAIN/VAL/TEST) as defined in the PDF. [1](https://2cq1sj-my.sharepoint.com/personal/kouklaki_serrenity_onmicrosoft_com/Documents/Microsoft%20Copilot%20Chat%20Files/Pattern_Recognition_Course_Assignment.pdf)
 train_df, val_df, _ = load_and_split(CSV_PATH)

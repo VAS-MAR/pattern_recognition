@@ -15,9 +15,7 @@ import torch.nn as nn
 import torch.optim as optim
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# =========================
 # 0) Φόρτωση & προετοιμασία
-# =========================
 df = pd.read_csv("crimes.csv")
 
 # Συνεχή (Q3)
@@ -53,12 +51,9 @@ label_to_idx = {k:i for i,k in enumerate(killers)}
 ytrain_idx = np.array([label_to_idx[k] for k in ytrain])
 yval_idx   = np.array([label_to_idx[k] for k in yval])
 
-# ================================
 # 2) Q4: Linear Classifier (γραμμικό)
-# ================================
 # Επιλογή 1 (σύμφωνη με εκφώνηση): PyTorch MSE + one-hot
 # Αν δεν έχεις PyTorch διαθέσιμο, δες ακριβώς πιο κάτω "Επιλογή 2".
-
 
 Xtr_t = torch.tensor(Xfull_train, dtype=torch.float32).to(device)  # (N, d_full)
 Xva_t = torch.tensor(Xfull_val,   dtype=torch.float32).to(device)
@@ -96,10 +91,7 @@ def predict_class_linear(x_full):
         logits = linear(t).cpu().numpy()[0]
     return killers[np.argmax(logits)]
 
-
-# ==========================================================
 # 3) PCA(2) όπως στο Q3 (ΜΟΝΟ στα συνεχόμενα) — reuse “σκηνικό”
-# ==========================================================
 scaler = StandardScaler()
 Xc_train_scaled = scaler.fit_transform(Xc_train)
 pca = PCA(n_components=2, random_state=42)
@@ -127,9 +119,7 @@ cat_baseline = cat_train.mean(axis=0)       # (d_cat_onehot,) - π.χ. [0.12, 0.
 # -> έτσι φτιάχνουμε πλήρες grid για Q4:
 Xgrid_full = np.hstack([Xgrid_cont, np.tile(cat_baseline, (Xgrid_cont.shape[0], 1))])
 
-# =====================================
 # 4) Προβλέψεις στο grid για τα δύο μοντέλα
-# =====================================
 # Bayes (από συνεχόμενα)
 preds_bayes = np.array([q3.predict_class(xc) for xc in Xgrid_cont])
 
@@ -144,9 +134,7 @@ ytrain_idx_m     = ytrain_idx  # ήδη 0..S-1
 cmap = plt.get_cmap('tab20', S)
 norm = mcolors.BoundaryNorm(boundaries=np.arange(-0.5, S+0.5, 1), ncolors=S)
 
-# =====================================
 # 5) Σχεδίαση overlay + ασυμφωνίες
-# =====================================
 fig, ax = plt.subplots(figsize=(8,6))
 
 # Φόντο: Gaussian Bayes decision regions (όπως Q3)
