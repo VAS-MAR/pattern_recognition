@@ -71,7 +71,7 @@ print(f"\nPreprocessed feature dimensions: {Z_train.shape[1]}")
 # ---------------------------
 # IMPORTANT: Replace this with your actual m from Q7
 # Common choices: m = 10, 15, 20, or based on explained variance
-m = 15  # 🔴 REPLACE THIS with your value from Q7!
+m = 2  # 🔴 REPLACE THIS with your value from Q7!
 
 print(f"\nUsing m = {m} principal components (from Q7)")
 
@@ -205,7 +205,7 @@ plt.tight_layout()
 
 plt.savefig('q8f_kmeans_clusters.png', dpi=300, bbox_inches='tight')
 print("✓ Saved plot: q8f_kmeans_clusters.png")
-plt.show()
+
 
 # ---------------------------
 # Q8f: Commentary

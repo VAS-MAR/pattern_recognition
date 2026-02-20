@@ -1,157 +1,130 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score
 
-# ---------------------------
-# Columns
-# ---------------------------
+# ---------------------------------------------------------
+# 1. Ορισμός Στηλών (Columns)
+# ---------------------------------------------------------
 CONT = [
-    "hour_float","latitude","longitude","victim_age",
-    "temp_c","humidity","dist_precinct_km","pop_density"
+    "hour_float", "latitude", "longitude", "victim_age",
+    "temp_c", "humidity", "dist_precinct_km", "pop_density"
 ]
-CAT = ["weapon_code","scene_type","weather","vic_gender"]
+CAT = ["weapon_code", "scene_type", "weather", "vic_gender"]
 
-# ---------------------------
-# Load data
-# ---------------------------
+# ---------------------------------------------------------
+# 2. Φόρτωση και Διαχωρισμός Δεδομένων (Splitting)
+# ---------------------------------------------------------
 df = pd.read_csv("crimes.csv")
 
+# Διαχωρισμός με βάση τη στήλη split
 train = df[df["split"] == "TRAIN"].reset_index(drop=True)
 val   = df[df["split"] == "VAL"].reset_index(drop=True)
 test  = df[df["split"] == "TEST"].reset_index(drop=True)
-
-# ΕΛΕΓΧΟΣ 1: Μέγεθος splits
-print(f"TRAIN: {len(train)}, VAL: {len(val)}, TEST: {len(test)}")
-print(f"Total in df: {len(df)}, Sum of splits: {len(train) + len(val) + len(test)}")
 
 X_train = train[CONT + CAT]
 X_val   = val[CONT + CAT]
 X_test  = test[CONT + CAT]
 
-# ΕΛΕΓΧΟΣ 2: Missing values
-print("\nMissing values in TRAIN:")
-print(X_train.isnull().sum()[X_train.isnull().sum() > 0])
-print("\nMissing values in TEST:")
-print(X_test.isnull().sum()[X_test.isnull().sum() > 0])
-
-# Χειρισμός NaN
-for col in CONT:
-    X_train[col].fillna(X_train[col].median(), inplace=True)
-    X_val[col].fillna(X_val[col].median(), inplace=True)
-    X_test[col].fillna(X_test[col].median(), inplace=True)
-
-for col in CAT:
-    X_train[col].fillna("UNKNOWN", inplace=True)
-    X_val[col].fillna("UNKNOWN", inplace=True)
-    X_test[col].fillna("UNKNOWN", inplace=True)
-
 y_train = train["killer_id"].values
 y_val   = val["killer_id"].values
 
-S = len(np.unique(y_train))   # number of killers
-print(f"\nNumber of killers (S): {S}")
+# S: Ο αριθμός των δολοφόνων
+S = len(np.unique(y_train))
 
-# ---------------------------
-# Preprocessing
-# ---------------------------
+# ---------------------------------------------------------
+# 3. Προεπεξεργασία (Preprocessing)
+# ---------------------------------------------------------
+# Δημιουργία του transformer: scale τις συνεχείς, one-hot τις κατηγορικές
 pre = ColumnTransformer([
-    ("scale", StandardScaler(), CONT),
+    ("scaler", StandardScaler(), CONT),
     ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False), CAT)
 ])
 
+# Fit μόνο στο TRAIN, transform σε όλα
 Z_train = pre.fit_transform(X_train)
 Z_val   = pre.transform(X_val)
 Z_test  = pre.transform(X_test)
 
-print(f"\nTransformed shapes - Train: {Z_train.shape}, Val: {Z_val.shape}, Test: {Z_test.shape}")
-
-# ---------------------------
-# PCA (m from Q7)
-# ---------------------------
+# ---------------------------------------------------------
+# 4. PCA (από το Q7) - Μείωση Διαστάσεων
+# ---------------------------------------------------------
+# Επιλέγουμε m=2 για την οπτικοποίηση και την ομαδοποίηση
 m = 2
-pca = PCA(n_components=m)
+pca_m = PCA(n_components=m)
 
-Z_train_m = pca.fit_transform(Z_train)
-Z_val_m   = pca.transform(Z_val)
-Z_test_m  = pca.transform(Z_test)
+Z_train_m = pca_m.fit_transform(Z_train)
+Z_val_m   = pca_m.transform(Z_val)
+Z_test_m  = pca_m.transform(Z_test)
 
-print(f"PCA shapes - Train: {Z_train_m.shape}, Val: {Z_val_m.shape}, Test: {Z_test_m.shape}")
-
-# ---------------------------
-# K-means (k = S)
-# ---------------------------
-kmeans = KMeans(n_clusters=S, random_state=0)
+# ---------------------------------------------------------
+# 5. Q8: K-means Clustering (Unsupervised Learning)
+# ---------------------------------------------------------
+# Εκπαίδευση του k-means με k = S clusters στον PCA χώρο
+kmeans = KMeans(n_clusters=S, random_state=42, n_init=10)
 train_clusters = kmeans.fit_predict(Z_train_m)
 
-# ---------------------------
-# Cluster → Killer mapping
-# ---------------------------
+# ---------------------------------------------------------
+# 6. Αντιστοίχιση Clusters σε Killer IDs (Majority Vote)
+# ---------------------------------------------------------
 cluster_to_killer = {}
+for q in range(S):
+    # Βρίσκουμε ποια εγκλήματα του TRAIN μπήκαν στο cluster q
+    indices = np.where(train_clusters == q)[0]
+    if len(indices) > 0:
+        # Ποιος δολοφόνος εμφανίζεται συχνότερα σε αυτό το cluster;
+        majority_label = np.bincount(y_train[indices]).argmax()
+        cluster_to_killer[q] = majority_label
+    else:
+        cluster_to_killer[q] = -1
 
-for c in range(S):
-    idx = np.where(train_clusters == c)[0]
-    majority = np.bincount(y_train[idx]).argmax()
-    cluster_to_killer[c] = majority
-
-print(f"\nCluster to Killer mapping: {cluster_to_killer}")
-
-# ---------------------------
-# VAL accuracy (check)
-# ---------------------------
+# ---------------------------------------------------------
+# 7. Αξιολόγηση στο VAL Split
+# ---------------------------------------------------------
 val_clusters = kmeans.predict(Z_val_m)
 val_pred = np.array([cluster_to_killer[c] for c in val_clusters])
 val_acc = accuracy_score(y_val, val_pred)
-print("Q8 VAL accuracy:", val_acc)
+print(f"Q8: VAL Accuracy = {val_acc:.4f}")
 
-# ---------------------------
-# TEST predictions
-# ---------------------------
+# ---------------------------------------------------------
+# 8. Προβλέψεις TEST και Δημιουργία submission.csv
+# ---------------------------------------------------------
 test_clusters = kmeans.predict(Z_test_m)
 test_pred = np.array([cluster_to_killer[c] for c in test_clusters])
 
-# ΕΛΕΓΧΟΣ 3: Μέγεθος predictions
-print(f"\nTest predictions length: {len(test_pred)}")
-print(f"Expected (test size): {len(test)}")
-print(f"Match: {len(test_pred) == len(test)}")
+# Προετοιμασία των στηλών p_killer_1...p_killer_S (πιθανότητες)
+# Για το k-means βάζουμε 1.0 στην επιλεγμένη κλάση
+p_probs = np.zeros((len(test_pred), S))
+for i, k_id in enumerate(test_pred):
+    p_probs[i, k_id - 1] = 1.0
 
-# ---------------------------
-# Create submission.csv
-# ---------------------------
+# Δημιουργία του DataFrame
 submission = pd.DataFrame({
     "incident_id": test["incident_id"],
     "predicted_killer": test_pred
 })
 
-# ΕΛΕΓΧΟΣ 4: Final submission check
-print(f"\nSubmission shape: {submission.shape}")
-print(f"Unique incidents in submission: {submission['incident_id'].nunique()}")
-print(f"Duplicate incidents: {submission['incident_id'].duplicated().sum()}")
+for k in range(1, S + 1):
+    submission[f"p_killer_{k}"] = p_probs[:, k-1]
 
-# Στο τέλος του κώδικα, πριν το to_csv:
-
-# Δημιουργία λίστας με όλα τα expected incidents
-expected_incidents = set(test["incident_id"])
-submission_incidents = set(submission["incident_id"])
-
-missing = expected_incidents - submission_incidents
-extra = submission_incidents - expected_incidents
-
-print(f"\nExpected incidents: {len(expected_incidents)}")
-print(f"Incidents in submission: {len(submission_incidents)}")
-print(f"Missing incidents: {len(missing)}")
-if missing:
-    print(f"Missing IDs: {sorted(list(missing))[:10]}")  # Πρώτα 10
-print(f"Extra incidents: {len(extra)}")
-if extra:
-    print(f"Extra IDs: {sorted(list(extra))[:10]}")
-
+# Αποθήκευση
 submission.to_csv("submission.csv", index=False)
-print("submission.csv created successfully!")
+print("Q8: submission.csv created successfully.")
 
-# ΕΛΕΓΧΟΣ 5: Preview
-#print("\nFirst 5 rows of submission:")
-print(submission.value_counts())
+# ---------------------------------------------------------
+# 9. Οπτικοποίηση (Scatter Plot)
+# ---------------------------------------------------------
+
+plt.figure(figsize=(8, 6))
+scatter = plt.scatter(Z_test_m[:, 0], Z_test_m[:, 1],
+                      c=test_pred, cmap="tab10", s=20, alpha=0.7)
+plt.title("Q8: K-means Clusters on TEST Split (PCA space)")
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.colorbar(scatter, label="Predicted Killer ID")
+plt.grid(True)
+plt.savefig("q8_clusters_plot.png")
